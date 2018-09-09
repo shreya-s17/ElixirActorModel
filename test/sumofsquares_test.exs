@@ -16,6 +16,7 @@ defmodule SUMOFSQUARESTest do
   test "sumofsquares" do
     IO.puts("I am here")
     #IO.puts("code finished #{inspect SUMOFSQUARES.useless()}")
-    IO.puts("I am here #{inspect SUMOFSQUARES.sendValues(0,10000000,2)}")
+    #SUMOFSQUARES.bulkCalculate(1,100,2,6666)
+    SUMOFSQUARES.main(10_00_00_000,24)
   end
 end

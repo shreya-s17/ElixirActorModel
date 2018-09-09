@@ -1,87 +1,70 @@
 defmodule SUMOFSQUARES do
   use GenServer
 
-#---------------------- Callbacks ----------------------
-
-def handle_call({:get_the_greeting},_from,mystate) do
-  IO.puts("Hey I am handling synchronous calls")
-  current_greeting = Map.get(mystate, :greeting)
-  {:reply, current_greeting,mystate}
-end
-def handle_call({:set_the_greeting, newgreet},_from,mystate) do
-  IO.puts("Hey I am updating message in synchronous calls")
-  newstate = Map.put(mystate,:greeting,newgreet)
-  {:reply, newstate, newstate}
-end
-def init(initial_data) do
-  greetings = %{:greeting => initial_data}
-  IO.puts("hey this is init")
-  {:ok, greetings}
-end
-
-#------------------------ Client - side -------------------
-
-  def startProcess() do
-    {:ok, basic_pid} = SUMOFSQUARES.start_link
-    state = get_my_state(basic_pid)
-    IO.puts("Hey this is client side state #{inspect state}")
-    newg = set_the_greeting(basic_pid, "huhuhu")
-    IO.puts("Hey I am the new message #{inspect newg}")
-  end
-  def get_my_state(process_id) do
-    IO.puts("Hey I trying to get GenServer process")
-    GenServer.call(process_id, {:get_the_greeting})
-  end
-  def set_the_greeting(process_id, new_greeting) do
-    IO.puts("Hey I am trying to update GenServer process")
-    GenServer.call(process_id, {:set_the_greeting, new_greeting})
+  def start_link() do
+    GenServer.start_link(__MODULE__ ,[])
   end
 
-#/////////////////////// Server - side ////////////////////
+  #---------------------- Callbacks ----------------------#
 
-  def start_link do
-    GenServer.start_link(__MODULE__ ,"HELLO")
+  def handle_cast({:result,value},state) do
+    #IO.puts("state is#{inspect state}")
+    {:noreply, [value | state]}
+  end
+  def handle_call(:result,_from,state) do
+    {:reply,state,state}
+  end
+  def init(args) do
+    {:ok, args}
   end
 
-#/////////////////////////////////
-  def hello do
-    :world
+  #------------------------ Client - side -----------------#
+
+  def main(n,k) do
+    :erlang.statistics(:runtime)
+    :erlang.statistics(:wall_clock)
+    {:ok,pid}=SUMOFSQUARES.start_link
+    
+    #if(n>1000) do
+      #spawnBulkProcesses(1000,n,k, pid,0)
+    #else
+      spawnBulkProcesses(1000,n,k, pid,1)
+    
+    IO.puts("#{ inspect :erlang.statistics(:runtime)} #{inspect :erlang.statistics(:wall_clock)}")
+    IO.inspect(GenServer.call(pid,:result),limit: :infinity)
   end
-  def calculateSum(start, last) do
-    result = :math.sqrt(((last*(last+1)*(2*last+1))/6) - ((start*(start+1)*(2*start+1))/6));
-    ##IO.puts("Calculatesum start #{inspect start} result #{inspect result}")
-    if(result ==  trunc(result)) do
-      IO.puts(" result #{inspect start} amrr #{inspect self()}")
-      start+1
-    else
-      ##IO.puts(" result #{inspect yy}")
-      false
+
+  def spawnBulkProcesses(no,n,k,pid,i) do
+  #IO.inspect(i)
+
+    if(i <= n) do
+      spawn(fn -> send self(), bulkCalculate(i, checkValue(i,no,n),k,pid) end) 
+      #x=checkValue(i,no,n)
+      #IO.puts("aaa #{inspect x}")           
+      spawnBulkProcesses(no,n,k,pid,i+no)
     end
+  end 
+
+  def checkValue(i,no,n) do
+     if(i+no>n) do 
+      n
+     else 
+      i+no-1 
+     end
   end
-# n= 3 k=2 start = 0  0 2 nil  1 3 nil   2 4 3 
-  def sendValues(start,n,k) do
-    ##IO.puts("yuhu")
-    if(start< n) do
-      spawn fn -> send self(), {:ans, calculateSum(start, k + start)} end
-      sendValues(start+1,n,k)
-    else
-    ##IO.puts("Im going to collect")
-      shreya =  (collect([],n)) |> Enum.reduce(&(&1 || &2)) 
-       ##IO.puts("start #{inspect start}  n #{inspect n} start #{inspect start} #{inspect shreya}")   
-    end
-   
-    #sendValues(n, span, start+1)
+  def bulkCalculate(start,n,k, pid) do
+    Enum.map(start..n, fn(x)-> calculateSum(x,x+k-1,pid) end)
+    #if(start <= n) do
+      #calculateSum(start,start+k-1,pid)
+      #bulkCalculate(start+1,n,k,pid)
+    #end
   end
-  def collect(list,counter) do
-    ##IO.puts("Im going to collect inside")
-    if(counter ==0) do
-    list
-    else
-        ##IO.puts("Im going to collect inside1 #{inspect counter}")
-      receive do
-      {:ans, value} -> value
-      end
-      ##IO.puts("list #{inspect list}")
+
+  def calculateSum(start, last, pid) do
+    sum = Enum.sum(Enum.map(start..last, fn(x)->x*x end))
+    sqrt = :math.sqrt(sum)
+    if( sqrt == trunc(sqrt)) do
+    GenServer.cast(pid,{:result, start})
     end
   end
 end
