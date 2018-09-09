@@ -23,6 +23,8 @@ defmodule SUMOFSQUARES do
   :erlang.statistics(:runtime)
   :erlang.statistics(:wall_clock)
   {:ok,pid}=SUMOFSQUARES.start_link
+   spawnTwoMachines()
+  #Node.spawn_link :"foo@192.168.0.6" , fn -> trunc(:math.pow(n,1/8)),n,k, pid,1) end
   spawnBulkProcesses(trunc(:math.pow(n,1/8)),n,k, pid,1)
   IO.puts("#{ inspect :erlang.statistics(:runtime)} #{inspect :erlang.statistics(:wall_clock)}")
   IO.inspect(GenServer.call(pid,:result),limit: :infinity)
@@ -30,11 +32,25 @@ defmodule SUMOFSQUARES do
  
   def spawnBulkProcesses(no,n,k,pid,i) do
     if(i <= n) do
-    spawn(fn -> send self(), bulkCalculate(i, checkValue(i,no,n),k,pid) end) 
+     # Node.spawn_link , fn-> bulkCalculate(i, checkValue(i,no,n),k,pid) end
+      IO.puts("in here")
     spawnBulkProcesses(no,n,k,pid,i+no)
     end
   end 
  
+  def spawnTwoMachines() do
+    {:ok, ip} = :inet.getif()
+    x=  hd(ip) |> elem(0) |> Tuple.to_list |> Enum.join(".")
+    firstIP = String.to_atom("xyz@" <> x)
+    Node.start firstIP
+    Node.set_cookie :sss
+    IO.puts("#{inspect Node.connect :"foo@192.168.0.6"}")
+    IO.puts("#{inspect Node.list}")
+    ip = String.to_atom("boo@192.168.0.6")
+    abc = Node.spawn_link :"boo@192.168.0.6", &Hello1.world/0
+    IO.puts("#{inspect abc}")
+  end
+
   def checkValue(i,no,n) do
   if(i+no>n) do 
   n
