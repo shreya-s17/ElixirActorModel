@@ -8,10 +8,10 @@ defmodule SUMOFSQUARES do
   #---------------------- Server callbacks ----------------------#
 
   def handle_cast({:result,value},state) do
-  # Collecting values in a list which are satisfy elliptic curve theory 
+  # Collecting values in a list which are satisfy elliptic curve theory
     {:noreply, [value | state]}
   end
-  
+
 
   def handle_call(:result,_from,state) do
   # Calling the server to find the consoldiated list of values satisfying requirement
@@ -35,8 +35,12 @@ defmodule SUMOFSQUARES do
     # This method is used for spawning multiple processes where batch size of each process is 1/8th root of n
     spawnBulkProcesses(trunc(:math.pow(n,1/8)),n,k, pid,1)
 
+    :erlang.statistics(:runtime)
+    :erlang.statistics(:wall_clock)
+
     # Fetch values appended in list by calling Genserver.call function
     IO.inspect(GenServer.call(pid,:result),limit: :infinity)
+
   end
 
 
@@ -48,12 +52,12 @@ defmodule SUMOFSQUARES do
         Task.async(fn ->
           bulkCalculate((x*no)-no+1, checkValue(x*no,n) ,k,pid)
           x
-    end)
+          end)
+      end
+    # To await for each spawned tasks
+    Enum.map(tasks, &Task.await/1)
   end
 
-  # To await for each spawned tasks
-  Enum.map(tasks, &Task.await/1)
-  end
 
   def checkValue(xno, n) do
     if(xno > n) do
@@ -62,7 +66,6 @@ defmodule SUMOFSQUARES do
       xno
     end
   end
-
 
   # Calling calculateSum for values from start to n with interval of k
   def bulkCalculate(start,n,k, pid) do
